@@ -13,7 +13,6 @@ GameObject:
   - component: {fileID: 268394937592063499}
   - component: {fileID: 22800121582110991}
   - component: {fileID: 4006812359818193356}
-  - component: {fileID: 6763317623984664293}
   - component: {fileID: 2145462268433652440}
   m_Layer: 5
   m_Name: PlayerCursor
@@ -36,7 +35,6 @@ RectTransform:
   m_Children:
   - {fileID: 5180970515998518683}
   m_Father: {fileID: 0}
-  m_RootOrder: -1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
@@ -101,7 +99,6 @@ MonoBehaviour:
   observableSearch: 2
   ObservedComponents:
   - {fileID: 4006812359818193356}
-  - {fileID: 6763317623984664293}
   sceneViewId: 0
   InstantiationId: 0
   isRuntimeInstantiated: 0
@@ -121,18 +118,6 @@ MonoBehaviour:
   m_SynchronizeRotation: 1
   m_SynchronizeScale: 0
   m_UseLocal: 1
---- !u!114 &6763317623984664293
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2840320216493330624}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0cd2b634782622244b618d80608f466c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &2145462268433652440
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -178,7 +163,6 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 7145745931578248888}
-  m_RootOrder: -1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0}
   m_AnchorMax: {x: 1, y: 0}

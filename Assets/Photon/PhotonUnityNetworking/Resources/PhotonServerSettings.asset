@@ -50,6 +50,9 @@ MonoBehaviour:
   - RPC_SetColor
   - SetCursorParentRPC
   - SetPlayerNameText
+  - OnDragRPC
+  - SetNameRPC
+  - SetPreoccupiedRPC
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1
