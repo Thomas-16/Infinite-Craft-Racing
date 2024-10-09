@@ -9,8 +9,16 @@ using System.Threading.Tasks;
 
 public class NewGameManager : MonoBehaviourPunCallbacks
 {
+    public enum AIModel
+    {
+        ChatGPT,
+        LLMUnity
+    }
+
+    public AIModel aiModel = AIModel.ChatGPT;
     public static NewGameManager Instance { get; private set; }
     [SerializeField] private LLMCharacter llmCharacter;
+    [SerializeField] private ChatGPTClient chatGPTClient;
     public Transform CanvasTransform;
     public Transform ElementParentTransform;
 
@@ -69,12 +77,16 @@ public class NewGameManager : MonoBehaviourPunCallbacks
         // Calculate the random position in canvas local space
         Vector2 localPos = randomElementButton.transform.position + new Vector3(offsetX, offsetY, 0);
         LLement newElement = SpawnLLement("...", localPos);
-        string response = await llmCharacter.Chat("Say ONLY one simple word. Preferrably the name of an object or element");
+        string response = "";
+        if (aiModel == AIModel.ChatGPT) {
+            response = await chatGPTClient.SendChatRequest("Say ONLY one simple word. Preferrably the name of an object or element");
+        }
+        else if (aiModel == AIModel.LLMUnity) {
+            response = await llmCharacter.Chat("Say ONLY one simple word. Preferrably the name of an object or element");
+        }
 
         // Split the string by spaces and take the first part
-        string[] newElementName = response.Split(' ');
-
-        newElement.SetName(newElementName[0]);
+        newElement.SetName(GetFirstWord(response));
         newElement.SetPreoccupied(false);
     }
 
@@ -148,11 +160,17 @@ public class NewGameManager : MonoBehaviourPunCallbacks
         PhotonNetwork.Destroy(element2.gameObject);
         //element.SetPreoccupied(true);
 
-        string response = await llmCharacter.Chat($"What do you get when you combine {elementName1} with {elementName2}? Respond with a single word only. It must be an existing word.");
-        
+        string response = "";
+        if (aiModel == AIModel.ChatGPT) {
+            response = await chatGPTClient.SendChatRequest($"What do you get when you combine {elementName1} with {elementName2}? Respond with a single word only. It must be an existing word.");
+        }
+        else if (aiModel == AIModel.LLMUnity) {
+            response = await llmCharacter.Chat($"What do you get when you combine {elementName1} with {elementName2}? Respond with a single word only. It must be an existing word.");
+        }
+
+
         // Split the string by spaces and take the first part
-        string[] newElementName = response.Split(' ');
-        element.SetName(newElementName[0]);
+        element.SetName(GetFirstWord(response));
         element.SetPreoccupied(false);
         //sfxManager.PlayCombineSFX();
     }
@@ -165,6 +183,7 @@ public class NewGameManager : MonoBehaviourPunCallbacks
         return element;
     }
 
+    #region Utils
     public Vector3 FindMidpoint(GameObject obj1, GameObject obj2)
     {
         Vector3 position1 = obj1.transform.position;
@@ -174,4 +193,21 @@ public class NewGameManager : MonoBehaviourPunCallbacks
         Vector3 midpoint = (position1 + position2) / 2;
         return midpoint;
     }
+
+    public string GetFirstWord(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return string.Empty;
+        }
+
+        // Split the string by spaces and take the first part
+        string firstWord = input.Split(' ')[0];
+
+        // Trim any trailing punctuation from the first word
+        firstWord = firstWord.TrimEnd('.', ',', '!', '?', ':', ';', '-', '\"', '\'');
+
+        return firstWord;
+    }
+    #endregion
 }
