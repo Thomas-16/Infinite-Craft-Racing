@@ -31,7 +31,7 @@ public class PlayerNameInputField : MonoBehaviour
             }
         }
 
-        PhotonNetwork.NickName = defaultName;
+        PhotonNetwork.LocalPlayer.NickName = defaultName;
     }
 
     /// <summary>
@@ -44,7 +44,7 @@ public class PlayerNameInputField : MonoBehaviour
             Debug.LogError("Player Name is null or empty");
             return;
         }
-        PhotonNetwork.NickName = value;
+        PhotonNetwork.LocalPlayer.NickName = value;
 
         PlayerPrefs.SetString(playerNamePrefKey, value);
     }

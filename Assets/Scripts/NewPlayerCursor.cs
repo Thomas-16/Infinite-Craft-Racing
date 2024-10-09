@@ -1,10 +1,12 @@
 using Photon.Pun;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class NewPlayerCursor : MonoBehaviourPun
+public class NewPlayerCursor : MonoBehaviourPun, IPunInstantiateMagicCallback
 {
     [SerializeField] private Image cursorImage; // The UI Image component for the cursor
+    [SerializeField] private TextMeshProUGUI playerNameText;
     private RectTransform cursorRectTransform;
 
     private void Start()
@@ -21,9 +23,15 @@ public class NewPlayerCursor : MonoBehaviourPun
         // Get the RectTransform for positioning on the canvas
         cursorRectTransform = GetComponent<RectTransform>();
     }
+    [PunRPC]
+    public void SetPlayerNameText(string name) {
+        playerNameText.text = name;
+    }
 
     private void Update()
     {
+        Cursor.visible = false;
+
         // Update the cursor position for the local player based on the mouse position
         if (photonView.IsMine)
         {
@@ -42,11 +50,15 @@ public class NewPlayerCursor : MonoBehaviourPun
     private void RPC_SetColor(float r, float g, float b, float a)
     {
         cursorImage.color = new Color(r, g, b, a);
+        playerNameText.color = new Color(r, g, b, a);
     }
 
     [PunRPC]
     private void SetCursorParentRPC()
     {
         transform.SetParent(NewGameManager.Instance.CanvasTransform, false);
+    }
+    public void OnPhotonInstantiate(PhotonMessageInfo info) {
+        photonView.RPC(nameof(SetPlayerNameText), RpcTarget.AllBuffered, photonView.Owner.NickName);
     }
 }

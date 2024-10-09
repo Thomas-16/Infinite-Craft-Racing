@@ -49,6 +49,7 @@ MonoBehaviour:
   - RPC_AssignCursorColor
   - RPC_SetColor
   - SetCursorParentRPC
+  - SetPlayerNameText
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1
