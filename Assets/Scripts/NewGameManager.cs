@@ -88,15 +88,8 @@ public class NewGameManager : MonoBehaviourPunCallbacks
 
     private Color GetUniqueColor()
     {
-        // Pick a color from the list and remove it to ensure uniqueness
-        if (availableColors.Count > 0)
-        {
-            Color color = availableColors[0];
-            availableColors.RemoveAt(0);
-            return color;
-        }
-
-        // Default to white if all colors are exhausted
-        return Color.white;
+        int playerIndex = PhotonNetwork.LocalPlayer.ActorNumber % availableColors.Count;
+        Color playerColor = new Color(availableColors[playerIndex].r, availableColors[playerIndex].g, availableColors[playerIndex].b);
+        return playerColor;
     }
 }
