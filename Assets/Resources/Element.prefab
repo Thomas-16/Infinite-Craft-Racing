@@ -14,8 +14,10 @@ GameObject:
   - component: {fileID: 5917895594430530115}
   - component: {fileID: 1805892651736159160}
   - component: {fileID: 8121157167295133470}
-  - component: {fileID: 5430167487472588322}
   - component: {fileID: -1668174758256081656}
+  - component: {fileID: 7394706969174045785}
+  - component: {fileID: 693421852141046401}
+  - component: {fileID: 1727450140087014990}
   m_Layer: 5
   m_Name: Element
   m_TagString: Untagged
@@ -37,7 +39,6 @@ RectTransform:
   m_Children:
   - {fileID: 7925314195367806810}
   m_Father: {fileID: 0}
-  m_RootOrder: -1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
@@ -180,26 +181,6 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
---- !u!114 &5430167487472588322
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2550192447489738269}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1e6596d8a7bdb9342952e3097bb0082d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  elementName: Santa
-  llmCharacter: {fileID: 0}
-  text: {fileID: 0}
-  isDragging: 0
-  unselectedColor1: {r: 1, g: 1, b: 1, a: 1}
-  unselectedColor2: {r: 0.62352943, g: 0.62352943, b: 0.62352943, a: 1}
-  selectedColor1: {r: 0.8207547, g: 0.8207547, b: 0.8207547, a: 1}
-  selectedColor2: {r: 0.46226418, g: 0.46226418, b: 0.46226418, a: 1}
 --- !u!114 &-1668174758256081656
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -219,10 +200,72 @@ MonoBehaviour:
   OwnershipTransfer: 1
   observableSearch: 2
   ObservedComponents:
-  - {fileID: 5430167487472588322}
+  - {fileID: 1727450140087014990}
   sceneViewId: 0
   InstantiationId: 0
   isRuntimeInstantiated: 0
+--- !u!114 &7394706969174045785
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2550192447489738269}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f1828c345d2ea469fbcfd5e40c563633, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  rectTransform: {fileID: 0}
+  canvas: {fileID: 0}
+  OnClickDown:
+    m_PersistentCalls:
+      m_Calls: []
+  OnDragStart:
+    m_PersistentCalls:
+      m_Calls: []
+  OnDragEnd:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!114 &693421852141046401
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2550192447489738269}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2121af7529f864cec97c735fb36ea84b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  photonView: {fileID: 0}
+  unselectedColor1: {r: 1, g: 1, b: 1, a: 1}
+  unselectedColor2: {r: 0.62352943, g: 0.62352943, b: 0.62352943, a: 1}
+  selectedColor1: {r: 0.81960785, g: 0.81960785, b: 0.81960785, a: 1}
+  selectedColor2: {r: 0.4627451, g: 0.4627451, b: 0.4627451, a: 1}
+  canvas: {fileID: 0}
+  raycaster: {fileID: 0}
+  eventSystem: {fileID: 0}
+  ElementName: ...
+  elementNameLabel: {fileID: 1001206073491820050}
+  isPreoccupied: 1
+--- !u!114 &1727450140087014990
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2550192447489738269}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 627855c7f81362d41938ffe0b1475957, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_SynchronizePosition: 1
+  m_SynchronizeRotation: 1
+  m_SynchronizeScale: 0
+  m_UseLocal: 1
 --- !u!1 &4822463192855099037
 GameObject:
   m_ObjectHideFlags: 0
@@ -254,7 +297,6 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 418516508646119468}
-  m_RootOrder: -1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
