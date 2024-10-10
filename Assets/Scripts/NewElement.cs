@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using Photon.Pun;
 using System.Text.RegularExpressions;
 using UnityEngine.VFX;
+using Unity.VisualScripting;
 
 public class NewElement : MonoBehaviour, IDragHandler, IBeginDragHandler, IPointerDownHandler, IPointerUpHandler, IPointerClickHandler
 {
@@ -80,7 +81,7 @@ public class NewElement : MonoBehaviour, IDragHandler, IBeginDragHandler, IPoint
     }
 
     // Detect if we dropped onto another Element
-    private void DetectDropTarget(PointerEventData eventData) {
+    private async void DetectDropTarget(PointerEventData eventData) {
         // Raycast to check for overlapping UI elements
         PointerEventData pointerEventData = new PointerEventData(EventSystem.current) {
             position = eventData.position
@@ -90,23 +91,17 @@ public class NewElement : MonoBehaviour, IDragHandler, IBeginDragHandler, IPoint
         var raycastResults = new List<RaycastResult>();
         EventSystem.current.RaycastAll(pointerEventData, raycastResults);
 
-        foreach (var result in raycastResults) {
-            // Check if we dropped on another Element
-            Changer droppedOnChanger = result.gameObject.GetComponent<Changer>();
-            if (droppedOnChanger != null) {
-                Debug.Log($"Dropped on: {droppedOnChanger.ChangerName}");
-                Debug.Log(elementName);
-                _ = llmCharacter.Chat("What does " + elementName + " become after it goes through a " + droppedOnChanger.ChangerName + "? (please ONLY respond with the phrase it becomes and also you cannot invent new words)",
-                (string reply) => {
-                    reply = Regex.Replace(reply, "[^a-zA-Z\\s]", "");
+        foreach (var raycastResult in raycastResults) {
+            ElementStation droppedOnStation = raycastResult.gameObject.GetComponent<ElementStation>();
+            if (droppedOnStation != null) {
+                Debug.Log($"Dropped on: {droppedOnStation.GetStationText()}");
 
-                    Debug.Log(reply);
-                    latestReply = reply;
-                },
-                () => {
-                    SetName(latestReply);
-                },
-                false);
+                text.text = "...";
+                string[] result = await droppedOnStation.GetStationResult(this.elementName);
+
+                if (result.Length == 1) {
+                    SetName(result[0]);
+                }
 
                 break;
             }

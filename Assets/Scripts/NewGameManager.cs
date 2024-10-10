@@ -79,10 +79,10 @@ public class NewGameManager : MonoBehaviourPunCallbacks
         LLement newElement = SpawnLLement("...", localPos);
         string response = "";
         if (aiModel == AIModel.ChatGPT) {
-            response = await chatGPTClient.SendChatRequest("Say ONLY one simple word. Preferrably the name of an object or element");
+            response = await chatGPTClient.SendChatRequest("Say ONLY one simple word, a random object or element or concept.");
         }
         else if (aiModel == AIModel.LLMUnity) {
-            response = await llmCharacter.Chat("Say ONLY one simple word. Preferrably the name of an object or element");
+            response = await llmCharacter.Chat("Say ONLY one simple word, a random object or element or concept.");
         }
 
         // Split the string by spaces and take the first part
