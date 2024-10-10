@@ -6,6 +6,13 @@ using System.Collections.Generic;
 using LLMUnity;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using TMPro;
+
+[System.Serializable]
+public class Config
+{
+    public string openai_api_key;
+}
 
 public class NewGameManager : MonoBehaviourPunCallbacks
 {
@@ -29,6 +36,9 @@ public class NewGameManager : MonoBehaviourPunCallbacks
     private Dictionary<int, GameObject> playerCursors = new Dictionary<int, GameObject>();
 
     [SerializeField] private Button randomElementButton;
+
+    [SerializeField] private string randomElementPrompt = "Say ONLY one simple word. Preferrably the name of an object or element";
+    public static Config config;
 
     // Unique colors for each player
     private List<Color> availableColors = new List<Color> {
@@ -59,10 +69,30 @@ public class NewGameManager : MonoBehaviourPunCallbacks
 
     private void Start()
     {
+        string apiKey = ExtractAPIKeyConfig();
+        if (apiKey != "") {
+            chatGPTClient.apiKey = apiKey;
+        }
+
         // Check if already in a room
-        if (PhotonNetwork.InRoom)
+        if (PhotonNetwork.InRoom && GameConnectInfo.Instance.isJoiningAsPlayer)
         {
             SpawnLocalCursor();
+        }
+    }
+
+    private string ExtractAPIKeyConfig() {
+        TextAsset configFile = Resources.Load<TextAsset>("config");
+        if (configFile != null)
+        {
+            config = JsonUtility.FromJson<Config>(configFile.text);
+            Debug.Log("API Key Loaded: " + config.openai_api_key);
+            return config.openai_api_key;
+        }
+        else
+        {
+            Debug.LogWarning("Config file not found.");
+            return "";
         }
     }
 
@@ -79,10 +109,10 @@ public class NewGameManager : MonoBehaviourPunCallbacks
         LLement newElement = SpawnLLement("...", localPos);
         string response = "";
         if (aiModel == AIModel.ChatGPT) {
-            response = await chatGPTClient.SendChatRequest("Say ONLY one simple word. Preferrably the name of an object or element");
+            response = await chatGPTClient.SendChatRequest(randomElementPrompt);
         }
         else if (aiModel == AIModel.LLMUnity) {
-            response = await llmCharacter.Chat("Say ONLY one simple word. Preferrably the name of an object or element");
+            response = await llmCharacter.Chat(randomElementPrompt);
         }
 
         // Split the string by spaces and take the first part

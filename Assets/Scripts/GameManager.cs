@@ -11,16 +11,14 @@ public class GameManager : MonoBehaviourPunCallbacks
     [SerializeField] private Transform elementsParent;
     [SerializeField] private GameObject elementPrefab;
     [SerializeField] private GameObject cursorPrefab;
+    [SerializeField] private GameObject cursorCanvasPrefab;
+
 
     private string pendingNewElementName;
 
     private void Start() {
         PhotonNetwork.AutomaticallySyncScene = true;
-        if (PlayerCursor.LocalCursorInstance == null) {
-            Debug.LogFormat("We are Instantiating cursor from {0}", SceneManagerHelper.ActiveSceneName);
-            PhotonNetwork.Instantiate(cursorPrefab.name, Vector3.zero, Quaternion.identity);
-            Debug.Log("cursor spawned");
-        }
+
     }
     [PunRPC] 
     public void RPC_SetPendingNewElementName(string pendingNewElementName) {
@@ -39,10 +37,25 @@ public class GameManager : MonoBehaviourPunCallbacks
         element.SetElementName(pendingNewElementName);
         elementGO.transform.localScale = Vector3.one;
     }
+
+    public override void OnJoinedRoom()
+    {
+        base.OnJoinedRoom();
+        if (PlayerCursor.LocalCursorInstance == null) {
+            Debug.LogFormat("We are Instantiating cursor from {0}", SceneManagerHelper.ActiveSceneName);
+            GameObject cursorCanvas = GameObject.Instantiate(cursorCanvasPrefab);
+            GameObject cursorGO = PhotonNetwork.Instantiate(cursorPrefab.name, Vector3.zero, Quaternion.identity);
+            cursorGO.transform.parent = cursorCanvas.transform;
+            DontDestroyOnLoad(cursorCanvas);
+            Debug.Log("cursor spawned");
+        }
+    }
     public override void OnPlayerEnteredRoom(Player other) {
         Debug.LogFormat("OnPlayerEnteredRoom() {0}", other.NickName); // not seen if you're the player connecting
-        GameObject cursorGO = PhotonNetwork.Instantiate(cursorPrefab.name, Vector3.zero, Quaternion.identity);
-        cursorGO.GetComponent<PhotonView>().TransferOwnership(other);
+
+
+        //GameObject cursorGO = PhotonNetwork.Instantiate(cursorPrefab.name, Vector3.zero, Quaternion.identity);
+        //cursorGO.GetComponent<PhotonView>().TransferOwnership(other);
 
         if (PhotonNetwork.IsMasterClient) {
             Debug.LogFormat("OnPlayerEnteredRoom IsMasterClient {0}", PhotonNetwork.IsMasterClient); // called before OnPlayerLeftRoom
@@ -52,8 +65,15 @@ public class GameManager : MonoBehaviourPunCallbacks
         Debug.Log(PhotonNetwork.CurrentRoom.PlayerCount + " players are in the room");
     }
 
+    public override void OnDisconnected(DisconnectCause cause)
+    {
+        base.OnDisconnected(cause);
+        //PhotonNetwork.DestroyPlayerObjects(PhotonNetwork.LocalPlayer);
+    }
+
     public override void OnPlayerLeftRoom(Player other) {
         Debug.LogFormat("OnPlayerLeftRoom() {0}", other.NickName); // seen when other disconnects
+        PhotonNetwork.DestroyPlayerObjects(other);
 
         if (PhotonNetwork.IsMasterClient) {
             Debug.LogFormat("OnPlayerLeftRoom IsMasterClient {0}", PhotonNetwork.IsMasterClient); // called before OnPlayerLeftRoom

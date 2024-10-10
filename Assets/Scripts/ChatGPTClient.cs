@@ -8,7 +8,7 @@ using Newtonsoft.Json;
 
 public class ChatGPTClient : MonoBehaviour
 {
-    [SerializeField] private string apiKey = "your_openai_api_key_here";
+    public string apiKey = "your_openai_api_key_here";
     private string apiUrl = "https://api.openai.com/v1/chat/completions";
 
     [System.Serializable]

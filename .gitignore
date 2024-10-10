@@ -78,3 +78,5 @@ Desktop.ini
 
 # Build Folders
 /[Bb]uilds/
+Assets/Resources/config.json
+Assets/Resources/config.json.meta

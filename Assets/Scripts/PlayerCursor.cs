@@ -4,9 +4,10 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class PlayerCursor : MonoBehaviourPun, IPunObservable
+public class PlayerCursor : MonoBehaviour
 {
     public static GameObject LocalCursorInstance;
+    private PhotonView photonView;
 
     private Color[] colours = {
         Color.yellow,
@@ -20,37 +21,43 @@ public class PlayerCursor : MonoBehaviourPun, IPunObservable
     };
 
     private void Awake() {
+        photonView = GetComponent<PhotonView>();
+        if (photonView == null) {
+            Debug.LogError($"Can't find photon view for {this.gameObject.name}!");
+            return;
+        }
         if (photonView.IsMine) {
             LocalCursorInstance = gameObject;
         }
-        // #Critical
-        // we flag as don't destroy on load so that instance survives level synchronization, thus giving a seamless experience when levels load.
-        Debug.Log("no destroy flagged");
-        DontDestroyOnLoad(gameObject);
     }
+
     private void Start() {
         int playerIndex = PhotonNetwork.LocalPlayer.ActorNumber % colours.Length;
         photonView.RPC(nameof(RPC_AssignCursorColor), RpcTarget.All, colours[playerIndex].r, colours[playerIndex].g, colours[playerIndex].b);
     }
+
     void Update()
     {
         Cursor.visible = false;
         if (photonView.IsMine) {
-            transform.GetChild(0).localPosition = NormalizeMousePositionToCanvas();
+            transform.localPosition = NormalizeMousePositionToCanvas();
         }
     }
-    public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info) {
+
+    /*public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info) {
         if (stream.IsWriting) {
             stream.SendNext(transform.GetChild(0).localPosition);
         }
         else {
             transform.GetChild(0).localPosition = (Vector3)stream.ReceiveNext();
         }
-    }
+    }*/
+
     [PunRPC]
     public void RPC_AssignCursorColor(int r, int g, int b) {
         GetComponentInChildren<Image>().color = new Color(r,g,b);
     }
+
     private Vector3 NormalizeMousePositionToCanvas() {
         // Get the current mouse position in screen space (0, 0 at bottom left, Screen.width, Screen.height at top right)
         Vector3 mousePosition = Input.mousePosition;

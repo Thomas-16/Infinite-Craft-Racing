@@ -15,6 +15,56 @@ public class PlayerNameInputField : MonoBehaviour
 {
     // Store the PlayerPref Key to avoid typos
     const string playerNamePrefKey = "PlayerName";
+    string[] defaultNames = new string[]
+    {
+        "Shadow",
+        "Lunar",
+        "Nova",
+        "Crimson",
+        "Echo",
+        "Blaze",
+        "Thunder",
+        "Aqua",
+        "Star",
+        "Iron",
+        "Mystic",
+        "Storm",
+        "Crystal",
+        "Solar",
+        "Vortex",
+        "Dark",
+        "Phoenix",
+        "Silver",
+        "Frost",
+        "Night",
+        "Celestial",
+        "Nebula",
+        "Electro",
+        "Sky",
+        "Galactic",
+        "Tempest",
+        "Zephyr",
+        "Moon",
+        "Flame",
+        "Wraith",
+        "Raven",
+        "Steel",
+        "Sun",
+        "Hawk",
+        "Astra",
+        "Comet",
+        "Blizzard",
+        "Sonic",
+        "Luna",
+        "Bringer",
+        "Ice",
+        "Serpent",
+        "Walker",
+        "Ashen",
+        "Knight",
+        "Eclipse",
+        "Tide"
+    };
 
 
     /// <summary>
@@ -22,9 +72,10 @@ public class PlayerNameInputField : MonoBehaviour
     /// </summary>
     void Start() {
 
-        string defaultName = string.Empty;
+        string defaultName = defaultNames[Random.Range(0, defaultNames.Length - 1)];
         TMP_InputField _inputField = this.GetComponent<TMP_InputField>();
         if (_inputField != null) {
+            _inputField.text = defaultName;
             if (PlayerPrefs.HasKey(playerNamePrefKey)) {
                 defaultName = PlayerPrefs.GetString(playerNamePrefKey);
                 _inputField.text = defaultName;

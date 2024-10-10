@@ -118,6 +118,49 @@ public class LLement : MonoBehaviour
         // Add any additional logic here for when the drag ends
         photonView.RPC(nameof(OnDragRPC), RpcTarget.AllBuffered, false);
 
+        // Get the cursor position when dragging ends
+        Vector2 cursorPosition = Input.mousePosition;
+
+        // Set up the PointerEventData with the current cursor position
+        PointerEventData pointerEventData = new PointerEventData(eventSystem)
+        {
+            position = cursorPosition
+        };
+
+        // Perform a raycast from the cursor position
+        List<RaycastResult> raycastResults = new List<RaycastResult>();
+        raycaster.Raycast(pointerEventData, raycastResults);
+
+        // List to hold detected UI objects under the cursor
+        List<LLement> detectedLLement = new List<LLement>();
+
+        // Check raycast results for valid LLement objects
+        foreach (RaycastResult result in raycastResults)
+        {
+            LLement llement = result.gameObject.GetComponent<LLement>();
+            if (llement != null && !llement.isPreoccupied && result.gameObject != gameObject && !detectedLLement.Contains(llement))
+            {
+                detectedLLement.Add(llement);
+            }
+        }
+
+        // Check if we have detected any objects underneath
+        if (detectedLLement.Count > 0)
+        {
+            Debug.Log("detected element: " + detectedLLement[0].ElementName);
+            NewGameManager.Instance.CombineElements(this, detectedLLement[0]);
+        }
+
+        SetPreoccupied(false);
+    }
+
+
+/*
+    private void HandleDragEnd()
+    {
+        // Add any additional logic here for when the drag ends
+        photonView.RPC(nameof(OnDragRPC), RpcTarget.AllBuffered, false);
+
         // Get the RectTransform of the dragged element
         RectTransform rectTransform = GetComponent<RectTransform>();
 
@@ -157,7 +200,7 @@ public class LLement : MonoBehaviour
         }
 
         SetPreoccupied(false);
-    }
+    }*/
 
     [PunRPC]
     private void SetNameRPC(string newName) {
