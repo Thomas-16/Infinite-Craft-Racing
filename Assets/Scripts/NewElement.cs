@@ -24,7 +24,6 @@ public class NewElement : MonoBehaviour, IDragHandler, IBeginDragHandler, IPoint
 
     private Shape shape;
     private Vector3 offset;
-    private string latestReply;
 
     private void Awake() {
         text = GetComponentInChildren<TextMeshProUGUI>();
@@ -97,10 +96,17 @@ public class NewElement : MonoBehaviour, IDragHandler, IBeginDragHandler, IPoint
                 Debug.Log($"Dropped on: {droppedOnStation.GetStationText()}");
 
                 text.text = "...";
-                string[] result = await droppedOnStation.GetStationResult(this.elementName);
+                string[] results = await droppedOnStation.GetStationResult(this.elementName);
 
-                if (result.Length == 1) {
-                    SetName(result[0]);
+                if (results.Length == 1) {
+                    SetName(results[0]);
+                } else {
+                    Instantiate(this.gameObject, transform.position + new Vector3(0, -10f, 0), Quaternion.identity, transform.parent).GetComponent<NewElement>().
+                        SetName(results[0]);
+                    Instantiate(this.gameObject, transform.position + new Vector3(0f, -100f, 0), Quaternion.identity, transform.parent).GetComponent<NewElement>().
+                        SetName(results[1]);
+
+                    Destroy(gameObject);
                 }
 
                 break;
@@ -124,7 +130,7 @@ public class NewElement : MonoBehaviour, IDragHandler, IBeginDragHandler, IPoint
     }
     public void OnPointerClick(PointerEventData eventData) {
         if (eventData.clickCount == 2) {
-            //gameManager.SpawnElement(elementName, transform.position + new Vector3(10f, -10f, 0));
+            Instantiate(this.gameObject, transform.position + new Vector3(10f, -10f, 0), Quaternion.identity, transform.parent);
         }
     }
     public void SetName(string name) {
