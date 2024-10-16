@@ -150,6 +150,13 @@ public class NewGameManager : MonoBehaviourPunCallbacks
         // Spawn the element at the calculated position
         LLement newElement = SpawnLLement("...", localPos);
         string response = "";
+        
+        if (aiModel == AIModel.ChatGPT) {
+            response = await chatGPTClient.SendChatRequest("Say ONLY one simple word, a random object or element or concept.");
+        }
+        else if (aiModel == AIModel.LLMUnity) {
+            response = await llmCharacter.Chat("Say ONLY one simple word, a random object or element or concept.");
+        }
 
         if (aiModel == AIModel.ChatGPT)
         {
