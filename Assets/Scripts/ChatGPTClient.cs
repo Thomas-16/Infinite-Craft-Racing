@@ -21,7 +21,7 @@ public class ChatGPTClient : MonoBehaviour
     [System.Serializable]
     public class ChatRequest
     {
-        public string model = "gpt-4"; // Using GPT-4 model
+        public string model = "gpt-4o-mini"; // Using GPT-4 model
         public List<Message> messages;
         public float temperature = 1f;
     }
