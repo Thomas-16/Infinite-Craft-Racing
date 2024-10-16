@@ -14,6 +14,35 @@ public class Config
     public string openai_api_key;
 }
 
+[System.Serializable]
+public class ElementData
+{
+    public string word;
+    public string primaryColor;
+    public string secondaryColor;
+
+    public Color PrimaryColor
+    {
+        get { return HexToColor(primaryColor); }
+    }
+
+    public Color SecondaryColor
+    {
+        get { return HexToColor(secondaryColor); }
+    }
+
+    // Convert hex color string to Unity's Color
+    private Color HexToColor(string hex)
+    {
+        Color color;
+        if (ColorUtility.TryParseHtmlString(hex, out color))
+        {
+            return color;
+        }
+        return Color.black; // Fallback color
+    }
+}
+
 public class NewGameManager : MonoBehaviourPunCallbacks
 {
     public enum AIModel
@@ -37,7 +66,9 @@ public class NewGameManager : MonoBehaviourPunCallbacks
 
     [SerializeField] private Button randomElementButton;
 
-    [SerializeField] private string randomElementPrompt = "Say ONLY one simple word. Preferrably the name of an object or element";
+    private string randomElementPrompt = "Say ONLY one simple word that represents an object or element. Additionally, return a primary color and a secondary color associated with this word, both in hex code format. Deliver the response as a JSON object with the keys 'word', 'primaryColor', and 'secondaryColor'. Here’s an example format: {\"word\": \"Fire\", \"primaryColor\": \"#FF4500\", \"secondaryColor\": \"#FFD700\"}. Keep it simple and engaging for a game where players combine elements. Do not make up words. The kind of words I'm looking for include, but are not limited to: fire, water, lava, grass, ghost, fairy, rock, steel, psychic, volcano, hurricane, wind, turbine, glass, sand, stone, boulder, arsonist, inferno, bed, chair, pigeon, dinosaur, elephant. Try to be creative and do not to repeat the same word over and over again.";
+
+   // [SerializeField] private string randomElementPrompt = "Say ONLY one simple word. Preferrably the name of an object or element. This is for a game where you're combining different elements. Try to keep things fun and exciting. Do not make up words.";
     public static Config config;
 
     // Unique colors for each player
@@ -96,29 +127,52 @@ public class NewGameManager : MonoBehaviourPunCallbacks
         }
     }
 
-    public async void GetRandomElement() {
-        // Define the range for random positioning around the center
-        float range = 200f; // Adjust this value as necessary
+    public async void GetRandomElement()
+    {
+        // Define the range for random positioning around the button
+        float range = 300f; // Adjust this value as necessary
+        float minDistance = 100f; // Minimum distance from the button
 
-        // Generate a random position offset from the center
-        float offsetX = Random.Range(-range, range);
-        float offsetY = Random.Range(-range, range);
+        Vector2 localPos;
 
-        // Calculate the random position in canvas local space
-        Vector2 localPos = randomElementButton.transform.position + new Vector3(offsetX, offsetY, 0);
+        do
+        {
+            // Generate a random position offset from the button's position
+            float offsetX = Random.Range(-range, range);
+            float offsetY = Random.Range(-range, range);
+
+            // Calculate the random position relative to the button's position
+            localPos = (Vector2)randomElementButton.transform.position + new Vector2(offsetX, offsetY);
+
+            // Loop until the position is at least `minDistance` away from the button
+        } while (Vector2.Distance(localPos, randomElementButton.transform.position) < minDistance);
+
+        // Spawn the element at the calculated position
         LLement newElement = SpawnLLement("...", localPos);
         string response = "";
-        if (aiModel == AIModel.ChatGPT) {
-            response = await chatGPTClient.SendChatRequest(randomElementPrompt);
-        }
-        else if (aiModel == AIModel.LLMUnity) {
-            response = await llmCharacter.Chat(randomElementPrompt);
-        }
 
-        // Split the string by spaces and take the first part
-        newElement.SetName(GetFirstWord(response));
+        if (aiModel == AIModel.ChatGPT)
+        {
+            response = await chatGPTClient.SendChatRequest(randomElementPrompt);
+            Debug.Log("response: " + response);
+        }
+        //else if (aiModel == AIModel.LLMUnity)
+        //{
+            //response = await llmCharacter.Chat(randomElementPrompt);
+        //}
+
+        // Split the response and set the name of the new element
+        //newElement.SetName(GetFirstWord(response));
+        //newElement.SetPreoccupied(false);
+
+        ElementData element = JsonUtility.FromJson<ElementData>(response);
+        newElement.SetElementData(element);
         newElement.SetPreoccupied(false);
+
+
+
     }
+
 
     public override void OnJoinedRoom()
     {
@@ -192,16 +246,18 @@ public class NewGameManager : MonoBehaviourPunCallbacks
 
         string response = "";
         if (aiModel == AIModel.ChatGPT) {
-            response = await chatGPTClient.SendChatRequest($"What do you get when you combine {elementName1} with {elementName2}? Respond with a single word only. It must be an existing word.");
+            response = await chatGPTClient.SendChatRequest("What word comes to mind when I combine " + elementName1 + " with " + elementName2 + "? Say ONLY one simple word that represents an object or element. Additionally, return a primary color and a secondary color associated with this word, both in hex code format. Deliver the response as a JSON object with the keys 'word', 'primaryColor', and 'secondaryColor'. Here’s an example format: {\"word\": \"Fire\", \"primaryColor\": \"#FF4500\", \"secondaryColor\": \"#FFD700\"}. Keep it simple and engaging for a game where players combine elements. Do not make up words. The kind of words I'm looking for include, but are not limited to: fire, water, lava, grass, ghost, fairy, rock, steel, psychic, volcano, hurricane, wind, turbine, glass, sand, stone, boulder, arsonist, inferno, bed, chair, pigeon, dinosaur, elephant.");
         }
-        else if (aiModel == AIModel.LLMUnity) {
-            response = await llmCharacter.Chat($"What do you get when you combine {elementName1} with {elementName2}? Respond with a single word only. It must be an existing word.");
-        }
+        //else if (aiModel == AIModel.LLMUnity) {
+        //    response = await llmCharacter.Chat("What word comes to mind when I combine " + elementName1 + " with " + elementName2 + "? Say ONLY one simple word that represents an object or element. Additionally, return a primary color and a secondary color associated with this word, both in hex code format. Deliver the response as a JSON object with the keys 'word', 'primaryColor', and 'secondaryColor'. Here’s an example format: {\"word\": \"Fire\", \"primaryColor\": \"#FF4500\", \"secondaryColor\": \"#FFD700\"}. Keep it simple and engaging for a game where players combine elements. Do not make up words.");
+        //}
 
 
         // Split the string by spaces and take the first part
-        element.SetName(GetFirstWord(response));
+        //element.SetName(GetFirstWord(response));
         element.SetPreoccupied(false);
+        ElementData elementData = JsonUtility.FromJson<ElementData>(response);
+        element.SetElementData(elementData);
         //sfxManager.PlayCombineSFX();
     }
 
@@ -241,3 +297,4 @@ public class NewGameManager : MonoBehaviourPunCallbacks
     }
     #endregion
 }
+

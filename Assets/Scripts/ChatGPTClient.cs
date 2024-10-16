@@ -23,7 +23,7 @@ public class ChatGPTClient : MonoBehaviour
     {
         public string model = "gpt-4"; // Using GPT-4 model
         public List<Message> messages;
-        public float temperature = 0.7f;
+        public float temperature = 1f;
     }
 
     [System.Serializable]

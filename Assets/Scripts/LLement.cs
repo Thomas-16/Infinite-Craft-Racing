@@ -10,6 +10,7 @@ using UnityEngine.Video;
 
 public class LLement : MonoBehaviour
 {
+    public ElementData elementData;
     public PhotonView photonView;
     private UIDragHandler dragHandler;
     private Shape shape;
@@ -62,14 +63,39 @@ public class LLement : MonoBehaviour
 
     }
 
+    public void SetElementData(ElementData eData) {
+        elementData = eData;
+        SetName(elementData.word);
+        photonView.RPC(nameof(SetColorsRPC), RpcTarget.AllBuffered, elementData.PrimaryColor.r, elementData.PrimaryColor.g, elementData.PrimaryColor.b, elementData.PrimaryColor.a, elementData.SecondaryColor.r, elementData.SecondaryColor.g, elementData.SecondaryColor.b, elementData.SecondaryColor.a);            
+    }
+
+    [PunRPC]
+    public void SetColorsRPC(float r1, float g1, float b1, float a1, float r2, float g2, float b2, float a2)
+    {
+        Color primaryColor = new Color(r1, g1, b1, a1);
+        Color secondaryColor = new Color(r2, g2, b2, a2);
+        shape.settings.fillColor = primaryColor;
+        shape.settings.fillColor2 = secondaryColor;
+    }
+
+    // Method to send the color through an RPC call
+    public void ChangeColor(Color color)
+    {
+        photonView.RPC("SetObjectColor", RpcTarget.AllBuffered, color.r, color.g, color.b, color.a);
+    }
+
     private void Update() {
         if (isPreoccupied) {
-            shape.settings.fillColor = selectedColor1;
-            shape.settings.fillColor2 = selectedColor2;
+            shape.settings.outlineColor = Color.grey;
+
+            //shape.settings.fillColor = selectedColor1;
+            //shape.settings.fillColor2 = selectedColor2;
         }
         else {
-            shape.settings.fillColor = unselectedColor1;
-            shape.settings.fillColor2 = unselectedColor2; 
+            shape.settings.outlineColor = Color.black;
+
+            //shape.settings.fillColor = unselectedColor1;
+            //shape.settings.fillColor2 = unselectedColor2; 
         }
 
 
