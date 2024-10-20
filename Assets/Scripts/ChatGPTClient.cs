@@ -21,10 +21,13 @@ public class ChatGPTClient : MonoBehaviour
     [System.Serializable]
     public class ChatRequest
     {
-        public string model = "gpt-4o-mini"; // Using GPT-4 model
+        public string model = "gpt-4o-mini"; // Correct GPT-4 model name (or "gpt-3.5-turbo" if needed)
         public List<Message> messages;
-        public float temperature = 1f;
+        public float temperature = 1f;      // Adjust this to add more randomness
+        public float top_p = 1f;            // Adjust this for more diverse output (try between 0.8 and 1)
+        public float presence_penalty = 0.5f; // Encourages the model to bring up new topics (values between 0 and 1)
     }
+
 
     [System.Serializable]
     public class Choice
@@ -48,9 +51,11 @@ public class ChatGPTClient : MonoBehaviour
         };
 
         // Create a ChatRequest object
-        ChatRequest chatRequest = new ChatRequest
-        {
-            messages = messages
+        ChatRequest chatRequest = new ChatRequest {
+            messages = messages,
+            temperature = 1.5f,         // Increase temperature for more creative responses
+            top_p = 0.8f,               // Use top_p to introduce sampling diversity
+            presence_penalty = 0.6f     // Encourage new topics or less repetitive answers
         };
 
         string jsonData = JsonConvert.SerializeObject(chatRequest);

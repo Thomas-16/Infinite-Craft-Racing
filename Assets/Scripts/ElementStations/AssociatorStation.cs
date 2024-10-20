@@ -10,7 +10,7 @@ public class AssociatorStation : ElementStation
     public override async Task<string[]> GetStationResult(string input) {
         string[] result = new string[1];
         result[0] = await chatGPTClient.SendChatRequest("give me one phrase or thing that associates " +input+ " with " +target+
-            " (please ONLY respond with the one phrase(no full sentence))");
+            " (please ONLY respond with the one word(no full sentence))");
         return result;
     }
 

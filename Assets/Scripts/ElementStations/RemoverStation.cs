@@ -10,7 +10,7 @@ public class RemoverStation : ElementStation
     public override async Task<string[]> GetStationResult(string input) {
         string[] result = new string[1];
         result[0] = await chatGPTClient.SendChatRequest("what does " + input + " become without " + target + "? " +
-            "(please ONLY respond with the word it becomes(no full sentence))");
+            "(please ONLY respond with the ONE word it becomes(no full sentence))");
         return result;
     }
 

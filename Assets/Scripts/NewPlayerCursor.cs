@@ -1,4 +1,5 @@
 using Photon.Pun;
+using Photon.Realtime;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -27,9 +28,20 @@ public class NewPlayerCursor : MonoBehaviourPun, IPunInstantiateMagicCallback
     public void SetPlayerNameText(string name) {
         playerNameText.text = name;
     }
-
+    private bool IsCreatorStillInRoom() {
+        foreach (Player player in PhotonNetwork.CurrentRoom.Players.Values) {
+            if (player.ActorNumber == photonView.CreatorActorNr) {
+                return true;
+            }
+        }
+        return false;
+    }
     private void Update()
     {
+        if(!IsCreatorStillInRoom()) {
+            Destroy(this);
+            return;
+        }
         Cursor.visible = false;
 
         // Update the cursor position for the local player based on the mouse position

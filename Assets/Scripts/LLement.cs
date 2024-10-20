@@ -6,31 +6,30 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using TMPro;
 using Photon.Pun;
-using UnityEngine.Video;
 
-public class LLement : MonoBehaviour
+public class LLement : MonoBehaviourPun, IPunObservable
 {
     public ElementData elementData;
-    public PhotonView photonView;
     private UIDragHandler dragHandler;
-    private Shape shape;
+    public Shape shape;
 
-    [SerializeField] private Color unselectedColor1;
-    [SerializeField] private Color unselectedColor2;
-    [SerializeField] private Color selectedColor1;
-    [SerializeField] private Color selectedColor2;
     [SerializeField] private Canvas canvas;
     [SerializeField] private GraphicRaycaster raycaster;
     [SerializeField] private EventSystem eventSystem;
 
     public string ElementName;
-    [SerializeField] private TextMeshProUGUI elementNameLabel;
+    public TextMeshProUGUI elementNameLabel;
 
-    public bool isPreoccupied = true;
+    public bool isPreoccupied = false;
     private bool isBeingDragged;
 
+    private void Awake() {
+        elementNameLabel = GetComponentInChildren<TextMeshProUGUI>();
+    }
     void Start()
     {
+        isPreoccupied = false;
+
         transform.SetParent(NewGameManager.Instance.ElementParentTransform, true);
         transform.SetAsLastSibling();
         transform.localScale = Vector3.one;
@@ -41,8 +40,10 @@ public class LLement : MonoBehaviour
         if (dragHandler != null)
         {
             // Subscribe to the OnDragStart and OnDragEnd events
-            dragHandler.OnClickDown.AddListener(HandleDragStart);
-            dragHandler.OnDragEnd.AddListener(HandleDragEnd);
+            dragHandler.OnClickDownEvent.AddListener(HandleDragStart);
+            dragHandler.OnPointerUpEvent.AddListener(HandleDragEnd);
+            dragHandler.OnDoubleClick.AddListener(HandleDoubleClick);
+            dragHandler.OnRightClick.AddListener(HandleRightClick);
         }
         else
         {
@@ -55,47 +56,35 @@ public class LLement : MonoBehaviour
         raycaster = canvas.GetComponent<GraphicRaycaster>();
         eventSystem = EventSystem.current;
 
-        photonView = GetComponent<PhotonView>();
         if (photonView.IsMine) {
-            photonView.RPC(nameof(SetNameRPC), RpcTarget.AllBuffered, ElementName);            
+            photonView.RPC(nameof(SetNameRPC), RpcTarget.AllBuffered, ElementName);
+            SetElementData(elementData);
         }
-
-
     }
 
     public void SetElementData(ElementData eData) {
         elementData = eData;
+        if(elementData.word != "...")
+            elementData.word = elementData.word.Replace(".", "");
         SetName(elementData.word);
-        photonView.RPC(nameof(SetColorsRPC), RpcTarget.AllBuffered, elementData.PrimaryColor.r, elementData.PrimaryColor.g, elementData.PrimaryColor.b, elementData.PrimaryColor.a, elementData.SecondaryColor.r, elementData.SecondaryColor.g, elementData.SecondaryColor.b, elementData.SecondaryColor.a);            
+        photonView.RPC(nameof(SetColorsRPC), RpcTarget.AllBuffered, elementData.Colour.r, elementData.Colour.g, elementData.Colour.b);            
     }
 
     [PunRPC]
-    public void SetColorsRPC(float r1, float g1, float b1, float a1, float r2, float g2, float b2, float a2)
+    public void SetColorsRPC(float r1, float g1, float b1)
     {
-        Color primaryColor = new Color(r1, g1, b1, a1);
-        Color secondaryColor = new Color(r2, g2, b2, a2);
-        shape.settings.fillColor = primaryColor;
-        shape.settings.fillColor2 = secondaryColor;
-    }
-
-    // Method to send the color through an RPC call
-    public void ChangeColor(Color color)
-    {
-        photonView.RPC("SetObjectColor", RpcTarget.AllBuffered, color.r, color.g, color.b, color.a);
+        Color color = new Color(r1, g1, b1);
+        elementNameLabel.color = Color.white;
+        shape.settings.fillColor = color;
+        shape.settings.fillColor2 = MultiplyColorVBy(color, .5f);
     }
 
     private void Update() {
         if (isPreoccupied) {
             shape.settings.outlineColor = Color.grey;
-
-            //shape.settings.fillColor = selectedColor1;
-            //shape.settings.fillColor2 = selectedColor2;
         }
         else {
             shape.settings.outlineColor = Color.black;
-
-            //shape.settings.fillColor = unselectedColor1;
-            //shape.settings.fillColor2 = unselectedColor2; 
         }
 
 
@@ -113,13 +102,23 @@ public class LLement : MonoBehaviour
         // Unsubscribe from events to avoid potential memory leaks
         if (dragHandler != null)
         {
-            dragHandler.OnClickDown.RemoveListener(HandleDragStart);
-            dragHandler.OnDragEnd.RemoveListener(HandleDragEnd);
+            dragHandler.OnClickDownEvent.RemoveListener(HandleDragStart);
+            dragHandler.OnPointerUpEvent.RemoveListener(HandleDragEnd);
+            dragHandler.OnDoubleClick.RemoveListener(HandleDoubleClick);
+            dragHandler.OnRightClick.RemoveListener(HandleRightClick);
         }
     }
 
     public void SetName(string newName) {
         photonView.RPC(nameof(SetNameRPC), RpcTarget.AllBuffered, newName);            
+    }
+    private void HandleDoubleClick() {
+        LLement newElement = NewGameManager.Instance.SpawnLLement(ElementName, transform.position + new Vector3(10f, -10f, 0));
+        newElement.elementData = new ElementData { word = ElementName, color = this.elementData.color };
+    }
+    private void HandleRightClick() {
+        SFXManager.Instance.PlaySelectSFX();
+        photonView.RPC(nameof(DeleteElement), RpcTarget.AllBuffered);
     }
 
     private void HandleDragStart()
@@ -128,19 +127,19 @@ public class LLement : MonoBehaviour
         if (!photonView.IsMine) {
             photonView.RequestOwnership();
         }
+        
 
         // Add any additional logic here for when the drag starts
         photonView.RPC(nameof(OnDragRPC), RpcTarget.AllBuffered, true);
         SetPreoccupied(true);
+        transform.SetAsLastSibling();
+
+        SFXManager.Instance.PlaySelectSFX();
 
     }
-
-    private void CheckHoverCoroutine() {
-
-    }
-
-    private void HandleDragEnd()
+    private async void HandleDragEnd()
     {
+
         // Add any additional logic here for when the drag ends
         photonView.RPC(nameof(OnDragRPC), RpcTarget.AllBuffered, false);
 
@@ -168,52 +167,28 @@ public class LLement : MonoBehaviour
             {
                 detectedLLement.Add(llement);
             }
-        }
+            ElementStation droppedOnStation = result.gameObject.GetComponent<ElementStation>();
+            if(droppedOnStation != null) {
+                Debug.Log($"Dropped on: {droppedOnStation.GetStationText()}");
 
-        // Check if we have detected any objects underneath
-        if (detectedLLement.Count > 0)
-        {
-            Debug.Log("detected element: " + detectedLLement[0].ElementName);
-            NewGameManager.Instance.CombineElements(this, detectedLLement[0]);
-        }
+                elementNameLabel.text = "...";
 
-        SetPreoccupied(false);
-    }
+                string[] results = await droppedOnStation.GetStationResult(this.ElementName);
 
+                if (results.Length == 1) {
+                    string colour = await NewGameManager.Instance.ChatGPTClient.SendChatRequest("Give me ONLY the a HEX code for the colour that represents " + results[0] + " with the # at the start");
+                    SetElementData(new ElementData { word = results[0], color = colour });
+                }
+                else {
+                    string colour1 = await NewGameManager.Instance.ChatGPTClient.SendChatRequest("Give me ONLY the a HEX code for the colour that represents " + results[0] + " with the # at the start");
+                    string colour2 = await NewGameManager.Instance.ChatGPTClient.SendChatRequest("Give me ONLY the a HEX code for the colour that represents " + results[0] + " with the # at the start");
+                    
+                    Instantiate(this.gameObject, transform.position + new Vector3(0, -10f, 0), Quaternion.identity, transform.parent).GetComponent<LLement>().
+                        SetElementData(new ElementData { word = results[0], color = colour1 });
+                    Instantiate(this.gameObject, transform.position + new Vector3(0f, -100f, 0), Quaternion.identity, transform.parent).GetComponent<LLement>().
+                        SetElementData(new ElementData { word = results[1], color = colour2 });
 
-/*
-    private void HandleDragEnd()
-    {
-        // Add any additional logic here for when the drag ends
-        photonView.RPC(nameof(OnDragRPC), RpcTarget.AllBuffered, false);
-
-        // Get the RectTransform of the dragged element
-        RectTransform rectTransform = GetComponent<RectTransform>();
-
-        // Perform a raycast to check for UI elements under each corner of the dragged element
-        Vector3[] corners = new Vector3[4];
-        rectTransform.GetWorldCorners(corners);
-
-        // List to hold detected UI objects under the dragged image
-        List<LLement> detectedLLement = new List<LLement>();
-
-        foreach (Vector3 corner in corners)
-        {
-            PointerEventData pointerEventData = new PointerEventData(eventSystem)
-            {
-                position = RectTransformUtility.WorldToScreenPoint(null, corner)
-            };
-
-            List<RaycastResult> raycastResults = new List<RaycastResult>();
-            raycaster.Raycast(pointerEventData, raycastResults);
-
-            foreach (RaycastResult result in raycastResults)
-            {
-                LLement llement = result.gameObject.GetComponent<LLement>();
-                // Avoid adding duplicates and ignore itself
-                if (llement != null && !llement.isPreoccupied && result.gameObject != gameObject && !detectedLLement.Contains(llement))
-                {
-                    detectedLLement.Add(llement);
+                    Destroy(gameObject);
                 }
             }
         }
@@ -221,12 +196,15 @@ public class LLement : MonoBehaviour
         // Check if we have detected any objects underneath
         if (detectedLLement.Count > 0)
         {
-            Debug.Log("detected element: " + detectedLLement[0].ElementName);
-            NewGameManager.Instance.CombineElements(this, detectedLLement[0]);
+            if(!elementNameLabel.text.Contains("+") && !(elementNameLabel.text == "...")
+                && !detectedLLement[0].elementNameLabel.text.Contains("+") && !(detectedLLement[0].elementNameLabel.text == "...")) {
+                NewGameManager.Instance.CombineElements(this, detectedLLement[0]);
+            }
         }
 
         SetPreoccupied(false);
-    }*/
+    }
+
 
     [PunRPC]
     private void SetNameRPC(string newName) {
@@ -241,7 +219,7 @@ public class LLement : MonoBehaviour
             transform.SetAsLastSibling();
         }
     }
-
+    
     public void SetPreoccupied(bool val) {
         photonView.RPC(nameof(SetPreoccupiedRPC), RpcTarget.AllBuffered, val);            
     }
@@ -249,6 +227,10 @@ public class LLement : MonoBehaviour
     [PunRPC]
     private void SetPreoccupiedRPC(bool val) {
         isPreoccupied = val;
+    }
+    [PunRPC]
+    private void DeleteElement() {
+        Destroy(gameObject);
     }
 
     // listen to on ui drag start
@@ -259,7 +241,52 @@ public class LLement : MonoBehaviour
 
     // change color based on is-selected
 
+    // Method to decrease a color's V (brightness) by 20%
+    private Color MultiplyColorVBy(Color color, float multi) {
+        // Convert the RGB color to HSV
+        Color.RGBToHSV(color, out float h, out float s, out float v);
 
+        // Decrease the V (brightness) by 20%
+        v *= multi;
 
+        // Clamp the value to ensure it's between 0 and 1
+        v = Mathf.Clamp01(v);
 
+        // Convert back to RGB and return the modified color
+        return Color.HSVToRGB(h, s, v);
+    }
+    private Color IncreaseColorVBy(Color color, float multi) {
+        // Convert the RGB color to HSV
+        Color.RGBToHSV(color, out float h, out float s, out float v);
+
+        // Decrease the V (brightness) by 20%
+        v += multi;
+
+        // Clamp the value to ensure it's between 0 and 1
+        v = Mathf.Clamp01(v);
+
+        // Convert back to RGB and return the modified color
+        return Color.HSVToRGB(h, s, v);
+    }
+
+    public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info) {
+        if (stream.IsWriting) {
+            stream.SendNext(shape.settings.fillColor.r);
+            stream.SendNext(shape.settings.fillColor.g);
+            stream.SendNext(shape.settings.fillColor.b);
+
+            stream.SendNext(elementData.word);
+            stream.SendNext(elementData.color);
+        }
+        else {
+            float r = (float)stream.ReceiveNext();
+            float g = (float)stream.ReceiveNext();
+            float b = (float)stream.ReceiveNext();
+            shape.settings.fillColor = new Color(r, g, b);
+            shape.settings.fillColor2 = MultiplyColorVBy(shape.settings.fillColor, .5f);
+
+            elementData.word = (string)stream.ReceiveNext();
+            elementData.color = (string)stream.ReceiveNext();
+        }
+    }
 }

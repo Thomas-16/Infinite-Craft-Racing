@@ -3,10 +3,10 @@ using Photon.Realtime;
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
-using LLMUnity;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using TMPro;
+using UnityEngine.Windows;
 
 [System.Serializable]
 public class Config
@@ -18,17 +18,11 @@ public class Config
 public class ElementData
 {
     public string word;
-    public string primaryColor;
-    public string secondaryColor;
+    public string color;
 
-    public Color PrimaryColor
+    public Color Colour
     {
-        get { return HexToColor(primaryColor); }
-    }
-
-    public Color SecondaryColor
-    {
-        get { return HexToColor(secondaryColor); }
+        get { return HexToColor(color); }
     }
 
     // Convert hex color string to Unity's Color
@@ -45,30 +39,24 @@ public class ElementData
 
 public class NewGameManager : MonoBehaviourPunCallbacks
 {
-    public enum AIModel
-    {
-        ChatGPT,
-        LLMUnity
-    }
 
-    public AIModel aiModel = AIModel.ChatGPT;
     public static NewGameManager Instance { get; private set; }
-    [SerializeField] private LLMCharacter llmCharacter;
-    [SerializeField] private ChatGPTClient chatGPTClient;
+    public ChatGPTClient ChatGPTClient;
     public Transform CanvasTransform;
     public Transform ElementParentTransform;
 
     [SerializeField] private GameObject cursorPrefab;
     [SerializeField] private GameObject elementPrefab;
+    [SerializeField] private TextAsset allItemsTxt;
 
     // This dictionary will hold references to each player's cursor by their Actor Number
     private Dictionary<int, GameObject> playerCursors = new Dictionary<int, GameObject>();
 
     [SerializeField] private Button randomElementButton;
 
-    private string randomElementPrompt = "Say ONLY one simple word that represents an object or element. Additionally, return a primary color and a secondary color associated with this word, both in hex code format. Deliver the response as a JSON object with the keys 'word', 'primaryColor', and 'secondaryColor'. Here’s an example format: {\"word\": \"Fire\", \"primaryColor\": \"#FF4500\", \"secondaryColor\": \"#FFD700\"}. Keep it simple and engaging for a game where players combine elements. Do not make up words. The kind of words I'm looking for include, but are not limited to: fire, water, lava, grass, ghost, fairy, rock, steel, psychic, volcano, hurricane, wind, turbine, glass, sand, stone, boulder, arsonist, inferno, bed, chair, pigeon, dinosaur, elephant. Try to be creative and do not to repeat the same word over and over again.";
+    private Dictionary<(string, string), (string, string)> recipes = new Dictionary<(string, string), (string, string)>();
 
-   // [SerializeField] private string randomElementPrompt = "Say ONLY one simple word. Preferrably the name of an object or element. This is for a game where you're combining different elements. Try to keep things fun and exciting. Do not make up words.";
+
     public static Config config;
 
     // Unique colors for each player
@@ -102,11 +90,11 @@ public class NewGameManager : MonoBehaviourPunCallbacks
     {
         string apiKey = ExtractAPIKeyConfig();
         if (apiKey != "") {
-            chatGPTClient.apiKey = apiKey;
+            ChatGPTClient.apiKey = apiKey;
         }
 
         // Check if already in a room
-        if (PhotonNetwork.InRoom && GameConnectInfo.Instance.isJoiningAsPlayer)
+        if (PhotonNetwork.InRoom)
         {
             SpawnLocalCursor();
         }
@@ -129,6 +117,8 @@ public class NewGameManager : MonoBehaviourPunCallbacks
 
     public async void GetRandomElement()
     {
+        SFXManager.Instance.PlayCombineSFX();
+
         // Define the range for random positioning around the button
         float range = 300f; // Adjust this value as necessary
         float minDistance = 100f; // Minimum distance from the button
@@ -149,37 +139,18 @@ public class NewGameManager : MonoBehaviourPunCallbacks
 
         // Spawn the element at the calculated position
         LLement newElement = SpawnLLement("...", localPos);
-        string response = "";
-        
-        if (aiModel == AIModel.ChatGPT) {
-            response = await chatGPTClient.SendChatRequest("Say ONLY one simple word, a random object or element or concept.");
-        }
-        else if (aiModel == AIModel.LLMUnity) {
-            response = await llmCharacter.Chat("Say ONLY one simple word, a random object or element or concept.");
-        }
 
-        if (aiModel == AIModel.ChatGPT)
-        {
-            response = await chatGPTClient.SendChatRequest(randomElementPrompt);
-            Debug.Log("response: " + response);
-        }
-        //else if (aiModel == AIModel.LLMUnity)
-        //{
-            //response = await llmCharacter.Chat(randomElementPrompt);
-        //}
 
-        // Split the response and set the name of the new element
-        //newElement.SetName(GetFirstWord(response));
-        //newElement.SetPreoccupied(false);
-
-        ElementData element = JsonUtility.FromJson<ElementData>(response);
+        //ElementData element = JsonUtility.FromJson<ElementData>(response);
+        string randomElement = await GetRandomLineAsync();
+        ElementData element = new ElementData() {
+            word = randomElement,
+            color = await ChatGPTClient.SendChatRequest("Give me ONLY the a HEX code for the colour that represents " + randomElement + " with the # at the start")
+        };
         newElement.SetElementData(element);
         newElement.SetPreoccupied(false);
 
-
-
     }
-
 
     public override void OnJoinedRoom()
     {
@@ -198,8 +169,21 @@ public class NewGameManager : MonoBehaviourPunCallbacks
         // Remove the cursor for the player that left
         if (playerCursors.TryGetValue(otherPlayer.ActorNumber, out GameObject cursor))
         {
-            Destroy(cursor);
+            PhotonNetwork.Destroy(cursor);
             playerCursors.Remove(otherPlayer.ActorNumber);
+        }
+
+        Debug.Log("MasterClient is transferring ownership of disconnected player's objects.");
+
+        foreach (PhotonView photonView in FindObjectsOfType<PhotonView>()) {
+            if (photonView.GetComponent<NewPlayerCursor>() != null) { continue; }
+            // Check if the object belongs to the leaving player
+            if (photonView.Owner == otherPlayer) {
+                Debug.LogFormat("Transferring ownership of {0} to the MasterClient", photonView.name);
+
+                // Transfer ownership to the MasterClient
+                photonView.TransferOwnership(PhotonNetwork.MasterClient);
+            }
         }
     }
 
@@ -246,26 +230,31 @@ public class NewGameManager : MonoBehaviourPunCallbacks
         string elementName1 = element1.ElementName;
         string elementName2 = element2.ElementName;
         Debug.Log($"Combining elements: {elementName1} and {elementName2}!");
+        SFXManager.Instance.PlayCombineSFX();
+
         LLement element = SpawnLLement($"{elementName1} + {elementName2}", FindMidpoint(element1.gameObject, element2.gameObject));
         PhotonNetwork.Destroy(element1.gameObject);
-        PhotonNetwork.Destroy(element2.gameObject);
-        //element.SetPreoccupied(true);
+        PhotonNetwork.Destroy(element2.gameObject);//element.SetPreoccupied(true);
 
-        string response = "";
-        if (aiModel == AIModel.ChatGPT) {
-            response = await chatGPTClient.SendChatRequest("What word comes to mind when I combine " + elementName1 + " with " + elementName2 + "? Say ONLY one simple word that represents an object or element. Additionally, return a primary color and a secondary color associated with this word, both in hex code format. Deliver the response as a JSON object with the keys 'word', 'primaryColor', and 'secondaryColor'. Here’s an example format: {\"word\": \"Fire\", \"primaryColor\": \"#FF4500\", \"secondaryColor\": \"#FFD700\"}. Keep it simple and engaging for a game where players combine elements. Do not make up words. The kind of words I'm looking for include, but are not limited to: fire, water, lava, grass, ghost, fairy, rock, steel, psychic, volcano, hurricane, wind, turbine, glass, sand, stone, boulder, arsonist, inferno, bed, chair, pigeon, dinosaur, elephant.");
+        string response, colourResponse;
+        if(TryGetRecipeResult(elementName1, elementName2, out response, out colourResponse)) {
+            Debug.Log($"saved recipe found for {elementName1} + {elementName2}");
+        } else {
+            response = await ChatGPTClient.SendChatRequest("What object or concept comes to mind when I combine " + elementName1 + " with " + elementName2 + "? Say ONLY one simple word that represents an object or concept. Keep it simple, creative and engaging for a game where players combine elements. Do not make up words.");
+            response = response.Replace(".", "");
+            colourResponse = await ChatGPTClient.SendChatRequest("Give me ONLY the a HEX code for the colour that represents " + response + " with the # at the start");
+
+            photonView.RPC(nameof(AddRecipeRPC), RpcTarget.All, elementName1, elementName2, response, colourResponse);
         }
-        //else if (aiModel == AIModel.LLMUnity) {
-        //    response = await llmCharacter.Chat("What word comes to mind when I combine " + elementName1 + " with " + elementName2 + "? Say ONLY one simple word that represents an object or element. Additionally, return a primary color and a secondary color associated with this word, both in hex code format. Deliver the response as a JSON object with the keys 'word', 'primaryColor', and 'secondaryColor'. Here’s an example format: {\"word\": \"Fire\", \"primaryColor\": \"#FF4500\", \"secondaryColor\": \"#FFD700\"}. Keep it simple and engaging for a game where players combine elements. Do not make up words.");
-        //}
 
 
-        // Split the string by spaces and take the first part
-        //element.SetName(GetFirstWord(response));
         element.SetPreoccupied(false);
-        ElementData elementData = JsonUtility.FromJson<ElementData>(response);
+        ElementData elementData = new ElementData() {
+            word = response,
+            color = colourResponse
+        };
         element.SetElementData(elementData);
-        //sfxManager.PlayCombineSFX();
+        SFXManager.Instance.PlayCombineSFX();
     }
 
 
@@ -273,10 +262,40 @@ public class NewGameManager : MonoBehaviourPunCallbacks
         GameObject elementGO = PhotonNetwork.Instantiate(elementPrefab.name, pos, Quaternion.identity);
         LLement element = elementGO.GetComponent<LLement>();
         element.ElementName = elementName;
+        element.elementData = new ElementData { word = elementName, color = "#FFFFFF" };
         return element;
     }
 
     #region Utils
+    // Add a new recipe
+    [PunRPC]
+    public void AddRecipeRPC(string element1, string element2, string result, string colourResult) {
+        // Use the ordered tuple as the key
+        var key = GetOrderedKey(element1, element2);
+        recipes[key] = (result, colourResult);
+
+        Debug.Log($"Saved recipe: {element1} + {element2} = {result} with colour: {colourResult}");
+    }
+    // Retrieve a recipe result
+    private bool TryGetRecipeResult(string element1, string element2, out string result, out string colourResult) {
+        // Use the ordered tuple as the key for lookup
+        (string, string) key = GetOrderedKey(element1, element2);
+        if (recipes.TryGetValue(key, out var tupleResult)) {
+            result = tupleResult.Item1;
+            colourResult = tupleResult.Item2;
+            return true;
+        }
+        result = string.Empty;
+        colourResult = string.Empty;
+        return false; // No recipe found
+    }
+    // Helper function to ensure elements are always ordered the same way
+    private (string, string) GetOrderedKey(string element1, string element2) {
+        // Ensure the two elements are stored in lexicographical order
+        return string.Compare(element1, element2, System.StringComparison.Ordinal) < 0 ?
+            (element1, element2) : (element2, element1);
+    }
+    
     public Vector3 FindMidpoint(GameObject obj1, GameObject obj2)
     {
         Vector3 position1 = obj1.transform.position;
@@ -285,6 +304,37 @@ public class NewGameManager : MonoBehaviourPunCallbacks
         // Calculate the midpoint
         Vector3 midpoint = (position1 + position2) / 2;
         return midpoint;
+    }
+    private string JsonResponseCleanup(string response) {
+        int startIndex = response.IndexOf('{');
+        int endIndex = response.IndexOf('}');
+
+        // Check if both braces exist
+        if (startIndex != -1 && endIndex != -1 && endIndex > startIndex) {
+            // Return the substring including the curly braces
+            return response.Substring(startIndex, endIndex - startIndex + 1);
+        }
+
+        // Return an empty string if curly braces are not found
+        return string.Empty;
+    }
+    // Async method to return a random line from the TextAsset
+    public async Task<string> GetRandomLineAsync() {
+        // Simulate an asynchronous operation (e.g., waiting for I/O, computation)
+        await Task.Yield(); // Yields control back to the caller and waits for the next frame
+
+        // Split the text into an array of lines
+        string[] lines = allItemsTxt.text.Split(new[] { '\r', '\n' }, System.StringSplitOptions.RemoveEmptyEntries);
+
+        // Check if there are any lines in the file
+        if (lines.Length == 0) {
+            Debug.LogWarning("Text file is empty or has no valid lines.");
+            return string.Empty;
+        }
+
+        // Get a random index and return the corresponding line
+        int randomIndex = Random.Range(0, lines.Length);
+        return lines[randomIndex];
     }
 
     public string GetFirstWord(string input)
